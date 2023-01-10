@@ -37,9 +37,7 @@ const Home = () => {
     setIsGenerating(false);
   };
 
-  const callGenerateEndpoint = async () => {
-    setIsGenerating(true);
-
+  const getSubheadings = async () => {
     const basePromptPrefix = `
     A blog post should be well-written, informative, and engaging. Here are a few tips for crafting a strong blog post:
     Use descriptive adjectives and nouns to bring your topic to life and help the reader visualize and understand what you are writing about.
@@ -50,20 +48,39 @@ const Home = () => {
     The topic of the blogpost is:
     `;
 
-    console.log("Calling OpenAI...");
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userInput, basePromptPrefix }),
-    });
+    const tokens = 250;
 
-    const data = await response.json();
-    const { output } = data;
-    console.log("OpenAI replied...", output.text);
+    const res = await callGenerateEndpoint(basePromptPrefix, tokens);
+    console.log('res:', res);
+    return res
+  };
 
-    const trimed = output.text.trim();
+  const getBulletPoints = async () => {
+    const subheadings = await getSubheadings()
+    const basePromptPrefix = `
+    Bullet points can be a useful tool for organizing and presenting information in a clear and concise way. Here are a few tips for crafting strong bullet points:
+    Keep each bullet point short and to-the-point. A good rule of thumb is to keep each bullet point to one or two short sentences.
+    Use parallel structure within each bullet point. This means that each bullet point should have the same grammatical structure (e.g., all should be phrases, or all should be complete sentences).
+    Use bullet points to list items that are related and can be read independently from one another. If the items in your list are not related or do not make sense on their own, consider using a different formatting tool, such as a numbered list or a paragraph.
+    Use bullet points to highlight key points or takeaways. Bullet points can help draw the reader's attention to the most important points in your content.
+    Avoid using too many bullet points in one section. If you have a lot of information to present, consider using subheadings to break up the content and make it easier to read.
+    
+    Take the title, the table of subheadings and generate bulletpoints of each one. The answer should be formatted as a JSON. The key will be 'data' and the value will be an array of JSON. The lenght of the array will be the amount of subheaders.
+    Each value on the array will be a JSON. This JSON will have 'subheading' and 'bulletpoints' as keys. The value for 'subheading' is the string that defines it and the value for 'bulletpoints' will be an array that cointains them. For JSON use this quotation marks (").   
+
+    Title: ${userInput}
+
+    Table of subheadings: ${subheadings}
+
+    Answer:
+    `;
+
+    const tokens = 400;
+
+    const res = await callGenerateEndpoint(basePromptPrefix, tokens);
+    console.log('res:', res);
+
+    const trimed = res.trim();
     const blogObject = JSON.parse(trimed);
     const blogArray = blogObject["data"];
 
@@ -74,6 +91,25 @@ const Home = () => {
     });
     setBlogSelection(updatedArray);
     setIsGenerating(false);
+  };
+
+  const callGenerateEndpoint = async (basePromptPrefix, tokens) => {
+    setIsGenerating(true);
+
+    console.log("Calling OpenAI...");
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userInput, basePromptPrefix, tokens }),
+    });
+
+    const data = await response.json();
+    const { output } = data;
+    console.log("OpenAI replied...", output.text);
+
+    return output.text;
   };
 
   const onUserChangedText = (event) => {
@@ -142,7 +178,7 @@ const Home = () => {
               className={
                 isGenerating ? "generate-button loading" : "generate-button"
               }
-              onClick={callGenerateEndpoint}
+              onClick={getBulletPoints}
             >
               <div className="generate">
                 {isGenerating ? <p>Thinking..</p> : <p>Generate</p>}
