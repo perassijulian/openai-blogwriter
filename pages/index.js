@@ -31,13 +31,24 @@ const Home = () => {
     setApiOutput(blogArray);
     const updatedArray = blogArray.map((item) => {
       const checked = new Array(item.bulletpoints.length).fill(true);
-      return {...item, checked}
+      return { ...item, checked };
     });
     setBlogSelection(updatedArray);
     setIsGenerating(false);
   };
+
   const callGenerateEndpoint = async () => {
     setIsGenerating(true);
+
+    const basePromptPrefix = `
+    A blog post should be well-written, informative, and engaging. Here are a few tips for crafting a strong blog post:
+    Use descriptive adjectives and nouns to bring your topic to life and help the reader visualize and understand what you are writing about.
+    Organize your post into clear sections or headings, and use subheadings to break up the text and make it easier to read.
+    Use examples and anecdotes to illustrate your points and make them more relatable to the reader.
+    Overall, the goal of a blog post is to provide value to the reader and engage them with interesting and informative content.
+    I want to write a blogpost. Write me 4 subheadings separated by commas. 
+    The topic of the blogpost is:
+    `;
 
     console.log("Calling OpenAI...");
     const response = await fetch("/api/generate", {
@@ -45,7 +56,7 @@ const Home = () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ userInput }),
+      body: JSON.stringify({ userInput, basePromptPrefix }),
     });
 
     const data = await response.json();
@@ -59,7 +70,7 @@ const Home = () => {
     setApiOutput(blogArray);
     const updatedArray = blogArray.map((item) => {
       const checked = new Array(item.bulletpoints.length).fill(true);
-      return {...item, checked}
+      return { ...item, checked };
     });
     setBlogSelection(updatedArray);
     setIsGenerating(false);
@@ -96,18 +107,20 @@ const Home = () => {
     for (let i = 0; i < blogSelection.length; i++) {
       const subheading = blogSelection[i].subheading;
       for (let j = 0; j < blogSelection[i].bulletpoints.length; j++) {
-        if (!(blogSelection[i].checked[j])) {
-          blogSelection[i].bulletpoints.splice(j,1)
+        if (!blogSelection[i].checked[j]) {
+          blogSelection[i].bulletpoints.splice(j, 1);
         }
       }
       const bulletpoints = blogSelection[i].bulletpoints.join(", ");
       if (i === 0) {
         output += ` '${subheading}' subheading and its bulletpoints are ${bulletpoints}.`;
       } else {
-        output += ` The ${i+1}th subheading is '${subheading}' and its bulletpoints are ${bulletpoints}.`;
+        output += ` The ${
+          i + 1
+        }th subheading is '${subheading}' and its bulletpoints are ${bulletpoints}.`;
       }
     }
-    console.log('output:', output);
+    console.log("output:", output);
   }
 
   return (
