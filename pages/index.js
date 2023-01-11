@@ -7,35 +7,7 @@ const Home = () => {
   const [apiOutput, setApiOutput] = useState([]);
   const [blogSelection, setBlogSelection] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const callGenerateBlog = async () => {
-    setIsGenerating(true);
-
-    console.log("Calling OpenAI...");
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userInput }),
-    });
-
-    const data = await response.json();
-    const { output } = data;
-    console.log("OpenAI replied...", output.text);
-
-    const trimed = output.text.trim();
-    const blogObject = JSON.parse(trimed);
-    const blogArray = blogObject["data"];
-
-    setApiOutput(blogArray);
-    const updatedArray = blogArray.map((item) => {
-      const checked = new Array(item.bulletpoints.length).fill(true);
-      return { ...item, checked };
-    });
-    setBlogSelection(updatedArray);
-    setIsGenerating(false);
-  };
+  const [blogFinished, setBlogFinished] = useState("");
 
   const getSubheadings = async () => {
     const basePromptPrefix = `
@@ -51,12 +23,11 @@ const Home = () => {
     const tokens = 250;
 
     const res = await callGenerateEndpoint(basePromptPrefix, tokens);
-    console.log('res:', res);
-    return res
+    return res;
   };
 
   const getBulletPoints = async () => {
-    const subheadings = await getSubheadings()
+    const subheadings = await getSubheadings();
     const basePromptPrefix = `
     Bullet points can be a useful tool for organizing and presenting information in a clear and concise way. Here are a few tips for crafting strong bullet points:
     Keep each bullet point short and to-the-point. A good rule of thumb is to keep each bullet point to one or two short sentences.
@@ -78,7 +49,6 @@ const Home = () => {
     const tokens = 400;
 
     const res = await callGenerateEndpoint(basePromptPrefix, tokens);
-    console.log('res:', res);
 
     const trimed = res.trim();
     const blogObject = JSON.parse(trimed);
@@ -122,10 +92,8 @@ const Home = () => {
     const updatedArray = blogSelection.map((item) => {
       if (item.subheading === subheading) {
         if (checked) {
-          // item.bulletpoints.splice(index, 0, bulletpoint);
           item.checked[index] = true;
         } else {
-          // item.bulletpoints.splice(index, 1);
           item.checked[index] = false;
         }
       }
@@ -138,8 +106,24 @@ const Home = () => {
     console.log("blogSelection:", blogSelection);
   };
 
+  const callGenerateBlog = async () => {
+    const basePromptPrefix = createString();
+    console.log("basePromptPrefix:", basePromptPrefix);
+    const tokens = 2000;
+
+    const res = await callGenerateEndpoint(basePromptPrefix, tokens);
+    setApiOutput([]);
+    setBlogFinished(res);
+    setIsGenerating(false);
+  };
+
   function createString() {
-    let output = "Write me a blog that has";
+    let output = `A blog post should be well-written, informative, and engaging. Here are a few tips for crafting a strong blog post:
+    Use descriptive adjectives and nouns to bring your topic to life and help the reader visualize and understand what you are writing about.
+    Use examples and anecdotes to illustrate your points and make them more relatable to the reader.
+    Overall, the goal of a blog post is to provide value to the reader and engage them with interesting and informative content.
+    Write me a blog that has`;
+
     for (let i = 0; i < blogSelection.length; i++) {
       const subheading = blogSelection[i].subheading;
       for (let j = 0; j < blogSelection[i].bulletpoints.length; j++) {
@@ -156,11 +140,11 @@ const Home = () => {
         }th subheading is '${subheading}' and its bulletpoints are ${bulletpoints}.`;
       }
     }
-    console.log("output:", output);
+    return output;
   }
 
   return (
-    <div className="flex flex-col w-full p-3 bg-red-300">
+    <div className="flex flex-col absolute top-0 left-0 w-full h-full p-3 pb-16 bg-green-200">
       <Head>
         <title>GPT-3 Writer | buildspace</title>
       </Head>
@@ -168,12 +152,12 @@ const Home = () => {
         <div className="flex gap-2 w-full justify-around">
           <input
             placeholder="Insert title or topic"
-            className="w-full"
+            className="w-full px-2 border-2 border-green-800 rounded-md"
             value={userInput}
             onChange={onUserChangedText}
             type="text"
           />
-          <div className="bg-green-300 w-20 px-2 py-1 cursor-pointer">
+          <div className="bg-green-800 text-white w-20 px-2 py-1 cursor-pointer rounded-md">
             <a
               className={
                 isGenerating ? "generate-button loading" : "generate-button"
@@ -191,10 +175,11 @@ const Home = () => {
             <div className="flex flex-col items-center">
               {apiOutput.map((item, i) => (
                 <div className="mt-2" key={i}>
-                  <h3 className="py-1 text-lg">{item.subheading}</h3>
+                  <h3 className="py-1 text-lg font-bold">{item.subheading}</h3>
                   {item.bulletpoints.map((bulletpoint, j) => (
                     <label key={j}>
                       <input
+                        className="mx-1"
                         type="checkbox"
                         value={bulletpoint}
                         checked={blogSelection[i].checked[j]}
@@ -209,14 +194,20 @@ const Home = () => {
                 </div>
               ))}
               <div
-                className="bg-green-800 w-5/6 text-white text-center p-2"
-                onClick={createString}
+                className="fixed bottom-0 right-0 left-0 flex justify-center items-center pb-4"
+                onClick={callGenerateBlog}
               >
-                WRITE BLOG
+                <button
+                  className="bg-green-800 font-bold text-white text-center p-2 w-5/6 rounded-md"
+                  onClick={callGenerateBlog}
+                >
+                  WRITE BLOG
+                </button>
               </div>
             </div>
           )}
         </div>
+        {blogFinished && <p className="mt-3">{blogFinished}</p>}
       </div>
     </div>
   );
